@@ -10,7 +10,7 @@ zInjector [dll path] [process name]
 #### Example
 
 ```
-<b>C:\zInjector.exe</b> C:\Library.dll <b>notepad.exe</b>
+C:\zInjector.exe C:\Library.dll notepad.exe
 ```
 
 ## Todo
