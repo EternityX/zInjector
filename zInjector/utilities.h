@@ -1,3 +1,6 @@
+#ifndef utilities_H
+#define utilities_H
+
 #pragma once
 
 #include <windows.h>
@@ -9,11 +12,12 @@
 #include <shlwapi.h>
 #include "utilities.h"
 
-#define METHOD_CREATEREMOTETHREAD 1
-#define METHOD_CODECAVE 2
-#define METHOD_MANUALMAP 3
-#define METHOD_THREADHIJACK 4
+#pragma comment (lib, "Shlwapi.lib")
 
-void RaiseError(const char* fmt, ...);
-unsigned int GrabProcessByName(char* process_name);
-bool CreateRemoteThreadMethod(unsigned int pid, const char* dll_path);
+#define METHOD_CREATEREMOTETHREAD 1
+
+void RaiseError( const char *fmt, ... );
+uint32_t GrabProcessByName( char *process_name );
+bool CreateRemoteThreadMethod( uint32_t pid, const char *dll_path );
+
+#endif // utilities_H
