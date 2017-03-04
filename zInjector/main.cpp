@@ -4,7 +4,7 @@ void InjectDLL( char *dll_path, char *process_name, int injection_method );
 
 int main( int argc, char* argv[ ] )
 {
-	if ( argc != 3 )
+	if ( argc != 4 )
 	{
 		RaiseError( "Usage: %s [DLL] [Process Name] [Injection Type]\n", argv[ 0 ] );
 	}
