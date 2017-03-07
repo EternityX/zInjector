@@ -6,7 +6,7 @@ int main( int argc, char* argv[ ] )
 {
 	if ( argc != 4 )
 	{
-		std::cout << "Usage: " << argv[ 0 ] << " [DLL] [Process Name] [Injection Type]" << std::endl;
+		std::cout << "Usage: " << argv[ 0 ] << " [DLL] [Process Name] [Injection Method]" << std::endl;
 		std::cin.get( );
 	}
 
@@ -16,7 +16,7 @@ int main( int argc, char* argv[ ] )
 	}
 	__except ( EXCEPTION_EXECUTE_HANDLER )
 	{
-		std::cout << "Unknown Injection Error. Are you using the correct arguments?" << std::endl;
+		std::cout << "Unknown injection error. Are you using the correct arguments?" << std::endl;
 		std::cin.get( );
 	}
 
@@ -34,7 +34,10 @@ bool StartInjectionMethod( unsigned int pid, char *dll_path, int injection_metho
 			return false;
 		}
 	break;
-	default: break;
+	default: 
+		std::cout << "Invalid injection method." << std::endl;
+		std::cout << "Available injection methods:" << std::endl << "1 - CreateRemoteThread" << std::endl;
+	break;
 	}
 
 	return true;
@@ -46,7 +49,7 @@ void InjectDLL( char *dll_path, char *process_name, int injection_method )
 	unsigned int pid = GrabProcessByName( process_name );
 	if ( !pid )
 	{
-		std::cout << "Process is not running." << std::endl;
+		std::cout << "Target process " << process_name << "is not running." << std::endl;
 		return;
 	}
 
@@ -58,7 +61,7 @@ void InjectDLL( char *dll_path, char *process_name, int injection_method )
 	}
 	else
 	{
-		std::cout << "library does not exist." << std::endl;
+		std::cout << "Selected library does not exist." << std::endl;
 		return;
 	}
 

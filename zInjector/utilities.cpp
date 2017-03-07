@@ -9,6 +9,7 @@ void RaiseError( )
 
 	std::string text( buffer, size );
 	std::cout << "ERROR: " << text << std::endl;
+	std::cin.get( );
 }
 
 /// <summary>
