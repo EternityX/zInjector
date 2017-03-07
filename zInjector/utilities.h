@@ -10,14 +10,15 @@
 #include <excpt.h>
 #include <signal.h>
 #include <shlwapi.h>
+#include <string>
 #include "utilities.h"
 
 #pragma comment (lib, "Shlwapi.lib")
 
 #define METHOD_CREATEREMOTETHREAD 1
 
-void RaiseError( const char *fmt, ... );
-uint32_t GrabProcessByName( char *process_name );
-bool CreateRemoteThreadMethod( uint32_t pid, const char *dll_path );
+void RaiseError( );
+unsigned int GrabProcessByName( char *process_name );
+bool CreateRemoteThreadMethod( unsigned int pid, const char *dll_path );
 
 #endif // utilities_H

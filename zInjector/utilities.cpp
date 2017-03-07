@@ -1,18 +1,14 @@
 #include "utilities.h"
 
-void RaiseError( const char *fmt, ... )
+void RaiseError( )
 {
-	char buffer[ 1024 ];
+	LPSTR buffer = nullptr;
 
-	va_list args;
+	// FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS
+	size_t size = FormatMessageA( 0x100 | 0x1000 | 0x200, nullptr, GetLastError( ), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), reinterpret_cast< LPSTR >( &buffer ), 0, nullptr );
 
-	va_start( args, fmt );
-	vsprintf_s( buffer, sizeof( buffer ), fmt, args );
-	va_end( args );
-
-	MessageBox( nullptr, buffer, "zInjector", MB_OK | MB_ICONASTERISK );
-
-	ExitProcess( EXIT_FAILURE );
+	std::string text( buffer, size );
+	std::cout << "ERROR: " << text << std::endl;
 }
 
 /// <summary>
@@ -20,18 +16,18 @@ void RaiseError( const char *fmt, ... )
 /// </summary>
 /// <param name="process_name">The process name</param>
 /// <returns>Process ID (PID)</returns>
-uint32_t GrabProcessByName( char *process_name )
+unsigned int GrabProcessByName( char *process_name )
 {
 	HANDLE snap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
-	uint32_t count = 0;
-	uint32_t pid = 0;
+	unsigned int count = 0;
+	unsigned int pid = 0;
 
 	if ( snap == INVALID_HANDLE_VALUE )
 	{
-		throw GetLastError( );
+		RaiseError( );
 	}
 
-	// check if process is running
+	// make sure process is running
 	if ( !WaitForSingleObject( snap, 5000 ) )
 	{
 		return 0;
@@ -56,7 +52,8 @@ uint32_t GrabProcessByName( char *process_name )
 		pid = -1;
 	}
 
-	CloseHandle( snap );
+	if ( !CloseHandle( snap ) )
+		RaiseError( );
 
 	return pid;
 }
@@ -66,23 +63,27 @@ uint32_t GrabProcessByName( char *process_name )
 /// </summary>
 /// <param name="pid">The process ID to our target</param>
 /// <param name="dll_path">The absolute path to the dynamic link library</param>
-/// <returns></returns>
-bool CreateRemoteThreadMethod( uint32_t pid, const char *dll_path )
+/// <returns>Will return false on failure. Use RaiseError( ) to retrieve the error message.</returns>
+bool CreateRemoteThreadMethod( unsigned int pid, const char *dll_path )
 {
-	HANDLE process;
-	process = OpenProcess( PROCESS_ALL_ACCESS, false, pid );
+	HANDLE process = OpenProcess( PROCESS_ALL_ACCESS, false, pid );
+	if ( !process )
+		return false;
 
-	LPVOID loadLibraryAddress;
-	loadLibraryAddress = LPVOID( GetProcAddress( GetModuleHandle( "kernel32.dll" ), "LoadLibraryA" ) );
+	LPVOID memory = LPVOID( VirtualAllocEx( process, nullptr, strlen( dll_path ) + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE ) );
+	if ( !memory )
+		return false;
 
-	LPVOID memory;
-	memory = LPVOID( VirtualAllocEx( process, nullptr, strlen( dll_path ) + 1, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE ) );
+	if ( !WriteProcessMemory( process, memory, dll_path, strlen( dll_path ) + 1, nullptr ) )
+		return false;
 
-	WriteProcessMemory( process, LPVOID( memory ), dll_path, strlen( dll_path ) + 1, nullptr );
-	CreateRemoteThread( process, nullptr, NULL, LPTHREAD_START_ROUTINE( loadLibraryAddress ), LPVOID( memory ), NULL, nullptr );
+	if ( !CreateRemoteThread( process, nullptr, NULL, LPTHREAD_START_ROUTINE( GetProcAddress( GetModuleHandleA( "kernel32.dll" ), "LoadLibraryA" ) ), memory, NULL, nullptr ) )
+		return false;
 
-	CloseHandle( process );
-	VirtualFreeEx( process, LPVOID( memory ), 0, MEM_RELEASE );
+	if ( !CloseHandle( process ) )
+		return false;
+	
+	VirtualFreeEx( process, memory, 0, MEM_RELEASE );
 
 	return true;
 }
