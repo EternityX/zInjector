@@ -18,6 +18,8 @@
 #define METHOD_CREATEREMOTETHREAD 1
 
 void RaiseError( );
+PIMAGE_NT_HEADERS RetrieveImageHeader( HANDLE map_view );
+bool CheckImage( char *dll_path );
 unsigned int GrabProcessByName( char *process_name );
 bool CreateRemoteThreadMethod( unsigned int pid, const char *dll_path );
 

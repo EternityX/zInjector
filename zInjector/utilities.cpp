@@ -2,6 +2,9 @@
 
 void RaiseError( )
 {
+	if ( GetLastError( ) == ERROR_SUCCESS )
+		return;
+
 	LPSTR buffer = nullptr;
 
 	// FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS
@@ -9,7 +12,71 @@ void RaiseError( )
 
 	std::string text( buffer, size );
 	std::cout << "ERROR: " << text << std::endl;
+	std::cout << "Press ENTER to continue . . .";
 	std::cin.get( );
+}
+
+PIMAGE_NT_HEADERS RetrieveImageHeader( HANDLE map_view )
+{
+	// retrieve pe
+	PIMAGE_DOS_HEADER dosHeader = static_cast< PIMAGE_DOS_HEADER >( map_view );
+	if ( dosHeader->e_magic != IMAGE_DOS_SIGNATURE )
+		return nullptr;
+
+	PIMAGE_NT_HEADERS imageHeader = reinterpret_cast< PIMAGE_NT_HEADERS >( reinterpret_cast< char * >( dosHeader ) + dosHeader->e_lfanew );
+	if ( imageHeader->Signature != IMAGE_NT_SIGNATURE )
+		return nullptr;
+
+	if ( !( imageHeader->FileHeader.Characteristics & IMAGE_FILE_DLL ) )
+	{
+		std::cout << "Selected payload is not a valid DLL." << std::endl;
+		return nullptr;
+	}
+
+	if ( !imageHeader->OptionalHeader.AddressOfEntryPoint )
+		std::cout << "WARNING: No entry point found!" << std::endl;
+
+	return imageHeader;
+}
+
+bool CheckImage( char *dll_path )
+{
+	// make sure the library exists
+	FILE *stream;
+	if ( fopen_s( &stream, dll_path, "r" ) == 0 )
+	{
+		fclose( stream );
+	}
+	else
+	{
+		return false;
+	}
+
+	HANDLE file = CreateFileA( dll_path, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
+	if ( file == INVALID_HANDLE_VALUE )
+		return false;
+
+	HANDLE map = CreateFileMappingA( file, nullptr, PAGE_READONLY, 0, 0, nullptr );
+	if ( !map )
+		return false;
+
+	HANDLE mapView = MapViewOfFile( map, FILE_MAP_READ, 0, 0, 0 );
+	if ( !mapView )
+		return false;
+
+	PIMAGE_NT_HEADERS header = RetrieveImageHeader( mapView );
+	if ( !header )
+		return false;
+
+	std::cout << "Image signature: " << header->Signature << std::endl;
+	std::cout << "Image base: " << header->OptionalHeader.ImageBase << std::endl;
+	std::cout << "Entry point: " << header->OptionalHeader.AddressOfEntryPoint << std::endl;
+	std::cout << "DLL characteristics: " << header->OptionalHeader.DllCharacteristics << std::endl;
+
+	if ( !CloseHandle( file ) )
+		return false;
+
+	return true;
 }
 
 /// <summary>
