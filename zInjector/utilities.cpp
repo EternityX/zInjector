@@ -1,6 +1,6 @@
 #include "utilities.h"
 
-void RaiseError( )
+void Utilities::RaiseError( )
 {
 	if ( GetLastError( ) == ERROR_SUCCESS )
 		return;
@@ -16,34 +16,10 @@ void RaiseError( )
 	std::cin.get( );
 }
 
-PIMAGE_NT_HEADERS RetrieveImageHeader( HANDLE map_view )
+bool Utilities::FileExists( char *path )
 {
-	// retrieve pe
-	PIMAGE_DOS_HEADER dosHeader = static_cast< PIMAGE_DOS_HEADER >( map_view );
-	if ( dosHeader->e_magic != IMAGE_DOS_SIGNATURE )
-		return nullptr;
-
-	PIMAGE_NT_HEADERS imageHeader = reinterpret_cast< PIMAGE_NT_HEADERS >( reinterpret_cast< char * >( dosHeader ) + dosHeader->e_lfanew );
-	if ( imageHeader->Signature != IMAGE_NT_SIGNATURE )
-		return nullptr;
-
-	if ( !( imageHeader->FileHeader.Characteristics & IMAGE_FILE_DLL ) )
-	{
-		std::cout << "Selected payload is not a valid DLL." << std::endl;
-		return nullptr;
-	}
-
-	if ( !imageHeader->OptionalHeader.AddressOfEntryPoint )
-		std::cout << "WARNING: No entry point found!" << std::endl;
-
-	return imageHeader;
-}
-
-bool CheckImage( char *dll_path )
-{
-	// make sure the library exists
 	FILE *stream;
-	if ( fopen_s( &stream, dll_path, "r" ) == 0 )
+	if ( fopen_s( &stream, path, "r" ) == 0 )
 	{
 		fclose( stream );
 	}
@@ -52,54 +28,91 @@ bool CheckImage( char *dll_path )
 		return false;
 	}
 
+	return true;
+}
+
+/// <summary>
+/// Retrieves the process header of the passed DLL
+/// </summary>
+/// <param name="dll_path">Absolute path to the DLL</param>
+/// <returns>Pointer to PIMAGE_NT_HEADERS</returns>
+PIMAGE_NT_HEADERS Utilities::RetrieveImageHeader( char *dll_path )
+{
 	HANDLE file = CreateFileA( dll_path, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
 	if ( file == INVALID_HANDLE_VALUE )
-		return false;
+		return nullptr;
 
 	HANDLE map = CreateFileMappingA( file, nullptr, PAGE_READONLY, 0, 0, nullptr );
 	if ( !map )
-		return false;
+		return nullptr;
 
 	HANDLE mapView = MapViewOfFile( map, FILE_MAP_READ, 0, 0, 0 );
 	if ( !mapView )
+		return nullptr;
+
+	PIMAGE_DOS_HEADER dosHeader = static_cast< PIMAGE_DOS_HEADER >( mapView );
+	if ( dosHeader->e_magic != IMAGE_DOS_SIGNATURE )
+		return nullptr;
+
+	PIMAGE_NT_HEADERS imageHeader = reinterpret_cast< PIMAGE_NT_HEADERS >( reinterpret_cast< char * >( dosHeader ) + dosHeader->e_lfanew );
+	if ( imageHeader->Signature != IMAGE_NT_SIGNATURE )
+		return nullptr;
+
+	if ( !UnmapViewOfFile( mapView ) )
+		return nullptr;
+
+	if ( !CloseHandle( map ) )
+		return nullptr;
+
+	if ( !CloseHandle( file ) )
+		return nullptr;
+
+	return imageHeader;
+}
+
+/// <summary>
+/// Verifies the file exists and is a valid DLL
+/// </summary>
+/// <param name="dll_path">Absolute path to the DLL</param>
+/// <returns>True on success</returns>
+bool Utilities::VerifyLibrary( char *dll_path )
+{
+	if ( !FileExists( dll_path ) )
 		return false;
 
-	PIMAGE_NT_HEADERS header = RetrieveImageHeader( mapView );
+	PIMAGE_NT_HEADERS header = RetrieveImageHeader( dll_path );
 	if ( !header )
 		return false;
 
-	std::cout << "Image signature: " << header->Signature << std::endl;
-	std::cout << "Image base: " << header->OptionalHeader.ImageBase << std::endl;
-	std::cout << "Entry point: " << header->OptionalHeader.AddressOfEntryPoint << std::endl;
-	std::cout << "DLL characteristics: " << header->OptionalHeader.DllCharacteristics << std::endl;
-
-	if ( !CloseHandle( file ) )
+	if ( !( header->FileHeader.Characteristics & IMAGE_FILE_DLL ) )
+	{
+		std::cout << "Selected payload is not a valid DLL." << std::endl;
 		return false;
+	}
+
+	if ( !header->OptionalHeader.AddressOfEntryPoint )
+		std::cout << "WARNING: No entry point found!" << std::endl;
 
 	return true;
 }
 
 /// <summary>
-/// Grab process by Name (e.g. notepad.exe)
+/// Grab process by name (e.g. notepad.exe)
 /// </summary>
 /// <param name="process_name">The process name</param>
 /// <returns>Process ID (PID)</returns>
-unsigned int GrabProcessByName( char *process_name )
+unsigned int Utilities::GrabProcessByName( char *process_name )
 {
 	HANDLE snap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
 	unsigned int count = 0;
 	unsigned int pid = 0;
 
 	if ( snap == INVALID_HANDLE_VALUE )
-	{
 		RaiseError( );
-	}
 
 	// make sure process is running
 	if ( !WaitForSingleObject( snap, 5000 ) )
-	{
 		return 0;
-	}
 
 	PROCESSENTRY32 proc;
 	proc.dwSize = sizeof( PROCESSENTRY32 );
@@ -116,9 +129,7 @@ unsigned int GrabProcessByName( char *process_name )
 	}
 
 	if ( count > 1 )
-	{
 		pid = -1;
-	}
 
 	if ( !CloseHandle( snap ) )
 		RaiseError( );
@@ -126,32 +137,3 @@ unsigned int GrabProcessByName( char *process_name )
 	return pid;
 }
 
-/// <summary>
-/// Start CreateRemoteThread injection
-/// </summary>
-/// <param name="pid">The process ID to our target</param>
-/// <param name="dll_path">The absolute path to the dynamic link library</param>
-/// <returns>Will return false on failure. Use RaiseError( ) to retrieve the error message.</returns>
-bool CreateRemoteThreadMethod( unsigned int pid, const char *dll_path )
-{
-	HANDLE process = OpenProcess( PROCESS_ALL_ACCESS, false, pid );
-	if ( !process )
-		return false;
-
-	LPVOID memory = LPVOID( VirtualAllocEx( process, nullptr, strlen( dll_path ) + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE ) );
-	if ( !memory )
-		return false;
-
-	if ( !WriteProcessMemory( process, memory, dll_path, strlen( dll_path ) + 1, nullptr ) )
-		return false;
-
-	if ( !CreateRemoteThread( process, nullptr, NULL, LPTHREAD_START_ROUTINE( GetProcAddress( GetModuleHandleA( "kernel32.dll" ), "LoadLibraryA" ) ), memory, NULL, nullptr ) )
-		return false;
-
-	if ( !CloseHandle( process ) )
-		return false;
-	
-	VirtualFreeEx( process, memory, 0, MEM_RELEASE );
-
-	return true;
-}

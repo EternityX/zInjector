@@ -3,24 +3,17 @@
 
 #pragma once
 
-#include <windows.h>
-#include <assert.h>
-#include <tlhelp32.h>
-#include <iostream>
-#include <excpt.h>
-#include <signal.h>
-#include <shlwapi.h>
-#include <string>
-#include "utilities.h"
-
-#pragma comment (lib, "Shlwapi.lib")
+#include "includes.h"
 
 #define METHOD_CREATEREMOTETHREAD 1
 
-void RaiseError( );
-PIMAGE_NT_HEADERS RetrieveImageHeader( HANDLE map_view );
-bool CheckImage( char *dll_path );
-unsigned int GrabProcessByName( char *process_name );
-bool CreateRemoteThreadMethod( unsigned int pid, const char *dll_path );
+namespace Utilities
+{
+	void RaiseError( );
+	bool FileExists( char *path );
+	PIMAGE_NT_HEADERS RetrieveImageHeader( char *dll_path );
+	bool VerifyLibrary( char *dll_path );
+	unsigned int GrabProcessByName( char *process_name );
+}
 
 #endif // utilities_H
