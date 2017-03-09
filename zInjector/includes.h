@@ -11,6 +11,8 @@
 #include <signal.h>
 #include <shlwapi.h>
 #include <string>
+#include <fstream>
+#include <experimental/filesystem>
 #include "utilities.h"
 
 #pragma comment (lib, "Shlwapi.lib")

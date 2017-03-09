@@ -5,6 +5,6 @@
 
 #include "includes.h"
 
-bool CreateRemoteThreadMethod( unsigned int pid, const char *dll_path );
+bool CreateRemoteThreadMethod( int pid, std::string dll_path );
 
 #endif // createremotethread_H

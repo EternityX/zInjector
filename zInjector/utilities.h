@@ -10,10 +10,9 @@
 namespace Utilities
 {
 	void RaiseError( );
-	bool FileExists( char *path );
-	PIMAGE_NT_HEADERS RetrieveImageHeader( char *dll_path );
-	bool VerifyLibrary( char *dll_path );
-	unsigned int GrabProcessByName( char *process_name );
+	PIMAGE_NT_HEADERS RetrieveImageHeader( std::string dll_path );
+	bool VerifyLibrary( std::string dll_path );
+	unsigned int GrabProcessByName( std::string process_name );
 }
 
 #endif // utilities_H

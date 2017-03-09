@@ -1,12 +1,12 @@
 #include "utilities.h"
 #include "createremotethread.h"
 
-void Initialize( char *dll_path, char *process_name, int injection_method );
-bool StartInjectionMethod( unsigned int pid, char *dll_path, int injection_method );
+void Initialize( std::string dll_path, std::string process_name, int injection_method );
+bool StartInjectionMethod( int pid, std::string dll_path, int injection_method );
 
 int main( int argc, char* argv[ ] )
 {
-	if ( argc < 4 )
+	if ( argc != 4 )
 	{
 		std::cout << "Usage: " << argv[ 0 ] << " [DLL] [Process Name] [Injection Method]" << std::endl;
 		std::cin.get( );
@@ -14,11 +14,11 @@ int main( int argc, char* argv[ ] )
 		return EXIT_FAILURE;
 	}
 
-	__try
+	try
 	{
 		Initialize( argv[ 1 ], argv[ 2 ], atoi( argv[ 3 ] ) );
 	}
-	__except ( EXCEPTION_EXECUTE_HANDLER )
+	catch ( ... )
 	{
 		std::cout << "Unknown injection error. Are you using the correct arguments?" << std::endl;
 		std::cin.get( );
@@ -29,7 +29,7 @@ int main( int argc, char* argv[ ] )
 	return EXIT_SUCCESS;
 }
 
-void Initialize( char *dll_path, char *process_name, int injection_method )
+void Initialize( std::string dll_path, std::string process_name, int injection_method )
 {
 	// make sure process is running
 	unsigned int pid = Utilities::GrabProcessByName( process_name );
@@ -52,14 +52,14 @@ void Initialize( char *dll_path, char *process_name, int injection_method )
 	}
 }
 
-bool StartInjectionMethod( unsigned int pid, char *dll_path, int injection_method )
+bool StartInjectionMethod( int pid, std::string dll_path, int injection_method )
 {
 	switch ( injection_method )
 	{
-		// https://msdn.microsoft.com/en-us/library/windows/desktop/ms682437(v=vs.85).aspx
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms682437(v=vs.85).aspx
 	case METHOD_CREATEREMOTETHREAD:
 	{
-		if ( !CreateRemoteThreadMethod( pid, dll_path ) )
+		if ( !CreateRemoteThreadMethod( pid, dll_path.c_str( ) ) )
 		{
 			return false;
 		}

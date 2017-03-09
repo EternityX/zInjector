@@ -16,29 +16,14 @@ void Utilities::RaiseError( )
 	std::cin.get( );
 }
 
-bool Utilities::FileExists( char *path )
-{
-	FILE *stream;
-	if ( fopen_s( &stream, path, "r" ) == 0 )
-	{
-		fclose( stream );
-	}
-	else
-	{
-		return false;
-	}
-
-	return true;
-}
-
 /// <summary>
 /// Retrieves the process header of the passed DLL
 /// </summary>
 /// <param name="dll_path">Absolute path to the DLL</param>
 /// <returns>Pointer to PIMAGE_NT_HEADERS</returns>
-PIMAGE_NT_HEADERS Utilities::RetrieveImageHeader( char *dll_path )
+PIMAGE_NT_HEADERS Utilities::RetrieveImageHeader( std::string dll_path )
 {
-	HANDLE file = CreateFileA( dll_path, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
+	HANDLE file = CreateFileA( dll_path.c_str( ), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
 	if ( file == INVALID_HANDLE_VALUE )
 		return nullptr;
 
@@ -58,12 +43,6 @@ PIMAGE_NT_HEADERS Utilities::RetrieveImageHeader( char *dll_path )
 	if ( imageHeader->Signature != IMAGE_NT_SIGNATURE )
 		return nullptr;
 
-	if ( !UnmapViewOfFile( mapView ) )
-		return nullptr;
-
-	if ( !CloseHandle( map ) )
-		return nullptr;
-
 	if ( !CloseHandle( file ) )
 		return nullptr;
 
@@ -75,12 +54,9 @@ PIMAGE_NT_HEADERS Utilities::RetrieveImageHeader( char *dll_path )
 /// </summary>
 /// <param name="dll_path">Absolute path to the DLL</param>
 /// <returns>True on success</returns>
-bool Utilities::VerifyLibrary( char *dll_path )
+bool Utilities::VerifyLibrary( std::string dll_path )
 {
-	if ( !FileExists( dll_path ) )
-		return false;
-
-	PIMAGE_NT_HEADERS header = RetrieveImageHeader( dll_path );
+	PIMAGE_NT_HEADERS header = RetrieveImageHeader( dll_path.c_str( ) );
 	if ( !header )
 		return false;
 
@@ -101,11 +77,11 @@ bool Utilities::VerifyLibrary( char *dll_path )
 /// </summary>
 /// <param name="process_name">The process name</param>
 /// <returns>Process ID (PID)</returns>
-unsigned int Utilities::GrabProcessByName( char *process_name )
+unsigned int Utilities::GrabProcessByName( std::string process_name )
 {
 	HANDLE snap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
-	unsigned int count = 0;
-	unsigned int pid = 0;
+	int count = 0;
+	int pid = 0;
 
 	if ( snap == INVALID_HANDLE_VALUE )
 		RaiseError( );
@@ -120,7 +96,7 @@ unsigned int Utilities::GrabProcessByName( char *process_name )
 
 	while ( ret )
 	{
-		if ( !_stricmp( proc.szExeFile, process_name ) )
+		if ( !_stricmp( proc.szExeFile, process_name.c_str( ) ) )
 		{
 			count++;
 			pid = proc.th32ProcessID;
