@@ -8,24 +8,35 @@
 /// <returns>True on success</returns>
 bool CreateRemoteThreadMethod( int pid, std::string dll_path )
 {
+	// With all possible rights, grab the handle to the process
 	HANDLE process = OpenProcess( PROCESS_ALL_ACCESS, false, pid );
 	if ( !process )
 		return false;
 
-	LPVOID memory = LPVOID( VirtualAllocEx( process, nullptr, strlen( dll_path.c_str( ) ) + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE ) );
-	if ( !memory )
+	// Allocate memory for our module inside the target process
+	LPVOID baseAddress = VirtualAllocEx( process, nullptr, dll_path.size( ) + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE );
+	if ( !baseAddress )
 		return false;
 
-	if ( !WriteProcessMemory( process, memory, dll_path.c_str( ), strlen( dll_path.c_str( ) ) + 1, nullptr ) )
+	// Grab the LoadLibraryA address
+	LPVOID loadLibraryAddress = GetProcAddress( GetModuleHandleA( "kernel32.dll" ), "LoadLibraryA" );
+	if ( !loadLibraryAddress )
 		return false;
 
-	if ( !CreateRemoteThread( process, nullptr, NULL, LPTHREAD_START_ROUTINE( GetProcAddress( GetModuleHandleA( "kernel32.dll" ), "LoadLibraryA" ) ), memory, NULL, nullptr ) )
+	// Copy the module name/path to the previously allocated memory (required by LoadLibraryA)
+	if ( !WriteProcessMemory( process, baseAddress, dll_path.c_str( ), dll_path.size( ) + 1, nullptr ) )
+		return false;
+
+	// Create a new thread in our target process pointing to our LoadLibraryA function
+	// NOTE: NtCreateThreadEx and RtlCreateUserThread can also be used instead of CreateRemoteThread
+	if ( !CreateRemoteThread( process, nullptr, NULL, LPTHREAD_START_ROUTINE( loadLibraryAddress ), baseAddress, NULL, nullptr ) )
 		return false;
 
 	if ( !CloseHandle( process ) )
 		return false;
 
-	VirtualFreeEx( process, memory, 0, MEM_RELEASE );
+	// Make sure to free our allocated memory
+	VirtualFreeEx( process, baseAddress, 0, MEM_RELEASE );
 
 	return true;
 }

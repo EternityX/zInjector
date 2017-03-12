@@ -148,11 +148,13 @@
   <ItemGroup>
     <ClCompile Include="createremotethread.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="manualmap.cpp" />
     <ClCompile Include="utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="createremotethread.h" />
     <ClInclude Include="includes.h" />
+    <ClInclude Include="manualmap.h" />
     <ClInclude Include="utilities.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
