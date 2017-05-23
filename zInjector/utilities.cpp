@@ -1,17 +1,17 @@
 #include "utilities.h"
+#include "main.h"
 
 void Utilities::RaiseError( )
 {
-	if ( GetLastError( ) == ERROR_SUCCESS )
+	auto last_error = GetLastError( );
+	if ( last_error == ERROR_SUCCESS )
 		return;
 
-	LPSTR buffer = nullptr;
+	auto format_buffer = nullptr;
+	auto format_flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS;
+	auto size = FormatMessage( format_flags, nullptr, last_error, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), ( LPSTR ) &format_buffer, 0, nullptr );
 
-	// FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS
-	// This will convert GetLastError into an easy-to-understand message
-	size_t size = FormatMessageA( 0x100 | 0x1000 | 0x200, nullptr, GetLastError( ), MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), reinterpret_cast< LPSTR >( &buffer ), 0, nullptr );
-
-	std::string text( buffer, size );
+	std::string text{ format_buffer, size };
 	std::cout << "ERROR: " << text << std::endl;
 	std::cout << "Press ENTER to continue . . .";
 	std::cin.get( );
@@ -37,29 +37,29 @@ PIMAGE_NT_HEADERS Utilities::RetrieveImageHeader( std::string dll_path )
 		return nullptr;
 
 	// Map the file with the handle to the mapping object we created
-	HANDLE mapView = MapViewOfFile( map, FILE_MAP_READ, 0, 0, 0 );
-	if ( !mapView )
+	HANDLE map_view = MapViewOfFile( map, FILE_MAP_READ, 0, 0, 0 );
+	if ( !map_view )
 		return nullptr;
 
 	// Grab the MS-DOS header with our file map
 	// https://en.wikibooks.org/wiki/X86_Disassembly/Windows_Executable_Files#MS-DOS_header
-	PIMAGE_DOS_HEADER dosHeader = static_cast< PIMAGE_DOS_HEADER >( mapView );
+	PIMAGE_DOS_HEADER dos_header = static_cast< PIMAGE_DOS_HEADER >( map_view );
 
 	// Make sure the MS-DOS header is actually valid
-	if ( dosHeader->e_magic != IMAGE_DOS_SIGNATURE )
+	if ( dos_header->e_magic != IMAGE_DOS_SIGNATURE )
 		return nullptr;
 
 	// Grab the NT header
-	PIMAGE_NT_HEADERS imageHeader = reinterpret_cast< PIMAGE_NT_HEADERS >( reinterpret_cast< char * >( dosHeader ) + dosHeader->e_lfanew );
-	
+	PIMAGE_NT_HEADERS image_nt_headers = reinterpret_cast< PIMAGE_NT_HEADERS >( reinterpret_cast< char * >( dos_header ) + dos_header->e_lfanew );
+
 	// Make sure it's valid
-	if ( imageHeader->Signature != IMAGE_NT_SIGNATURE )
+	if ( image_nt_headers->Signature != IMAGE_NT_SIGNATURE )
 		return nullptr;
 
 	if ( !CloseHandle( file ) )
 		return nullptr;
 
-	return imageHeader;
+	return image_nt_headers;
 }
 
 /// <summary>
@@ -69,17 +69,22 @@ PIMAGE_NT_HEADERS Utilities::RetrieveImageHeader( std::string dll_path )
 /// <returns>True on success</returns>
 bool Utilities::VerifyLibrary( std::string dll_path )
 {
-	PIMAGE_NT_HEADERS header = RetrieveImageHeader( dll_path.c_str( ) );
-	if ( !header )
+	PIMAGE_NT_HEADERS library_header = RetrieveImageHeader( dll_path.c_str( ) );
+	if ( !library_header )
 		return false;
 
-	if ( !( header->FileHeader.Characteristics & IMAGE_FILE_DLL ) )
+	if ( !( library_header->FileHeader.Characteristics & IMAGE_FILE_DLL ) )
 	{
-		std::cout << "Selected payload is not a valid DLL." << std::endl;
+		std::cout << "The selected payload is not a valid DLL." << std::endl;
+		return false;
+	}
+	if ( !library_header->FileHeader.Machine == process->FetchImageHeader( )->FileHeader.Machine )
+	{
+		std::cout << "The selected payload's architecture must match the target's" << std::endl;
 		return false;
 	}
 
-	if ( !header->OptionalHeader.AddressOfEntryPoint )
+	if ( !library_header->OptionalHeader.AddressOfEntryPoint )
 		std::cout << "WARNING: No entry point found!" << std::endl;
 
 	return true;
@@ -92,36 +97,34 @@ bool Utilities::VerifyLibrary( std::string dll_path )
 /// <returns>Process ID (PID)</returns>
 unsigned int Utilities::GrabProcessByName( std::string process_name )
 {
-	HANDLE snap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
-
-	if ( snap == INVALID_HANDLE_VALUE )
-		RaiseError( );
-
-	// make sure process is running
-	if ( !WaitForSingleObject( snap, 5000 ) )
-		return 0;
-
 	int count = 0;
 	int pid = 0;
 
-	PROCESSENTRY32 proc;
-	proc.dwSize = sizeof( PROCESSENTRY32 );
-	bool ret = Process32Next( snap, &proc );
+	HANDLE snapshot = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
+
+	if ( snapshot == INVALID_HANDLE_VALUE )
+		RaiseError( );
+
+	if ( !WaitForSingleObject( snapshot, 5000 ) )
+		return NULL;
+
+	PROCESSENTRY32 process_entry = { sizeof( PROCESSENTRY32 ) };
+	bool ret = Process32Next( snapshot, &process_entry );
 
 	while ( ret )
 	{
-		if ( process_name.compare( std::string( proc.szExeFile ) ) == 0 )
+		if ( process_name.compare( std::string( process_entry.szExeFile ) ) == NULL )
 		{
 			count++;
-			pid = proc.th32ProcessID;
+			pid = process_entry.th32ProcessID;
 		}
-		ret = Process32Next( snap, &proc );
+		ret = Process32Next( snapshot, &process_entry );
 	}
 
 	if ( count > 1 )
 		pid = -1;
 
-	if ( !CloseHandle( snap ) )
+	if ( !CloseHandle( snapshot ) )
 		RaiseError( );
 
 	return pid;

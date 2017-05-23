@@ -1,5 +1,31 @@
+/* MIT License
+
+Copyright(c) 2017 (https://github.com/EternityX/zInjector)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files( the "Software" ), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions :
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+
+SOFTWARE. */
+
+#include "main.h"
 #include "utilities.h"
 #include "createremotethread.h"
+
+Process* process;
 
 void Initialize( std::string dll_path, std::string process_name, int injection_method );
 bool StartInjectionMethod( int pid, std::string dll_path, int injection_method );
@@ -11,7 +37,7 @@ int main( int argc, char* argv[ ] )
 		std::cout << "Usage: " << argv[ 0 ] << " [DLL] [Process Name] [Injection Method]" << std::endl;
 		std::cin.get( );
 
-		return EXIT_FAILURE;
+		return 1;
 	}
 
 	try
@@ -23,19 +49,26 @@ int main( int argc, char* argv[ ] )
 		std::cout << "Unknown injection error. Are you using the correct arguments?" << std::endl;
 		std::cin.get( );
 
-		return EXIT_FAILURE;
+		return 1;
 	}
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
 void Initialize( std::string dll_path, std::string process_name, int injection_method )
 {
-	// make sure process is running
 	unsigned int pid = Utilities::GrabProcessByName( process_name );
 	if ( !pid )
 	{
 		std::cout << "Target process '" << process_name << "' is not running." << std::endl;
+		return;
+	}
+
+	// With all possible rights, grab the handle to the target process
+	process = new Process( pid );
+	if ( !process->Open( PROCESS_ALL_ACCESS, FALSE ) )
+	{
+		Utilities::RaiseError( );
 		return;
 	}
 
@@ -45,11 +78,11 @@ void Initialize( std::string dll_path, std::string process_name, int injection_m
 		return;
 	}
 
-	// try to inject
+	// Try to inject
 	if ( !StartInjectionMethod( pid, dll_path, injection_method ) )
-	{
 		Utilities::RaiseError( );
-	}
+
+	delete process;
 }
 
 bool StartInjectionMethod( int pid, std::string dll_path, int injection_method )
@@ -60,16 +93,15 @@ bool StartInjectionMethod( int pid, std::string dll_path, int injection_method )
 	case METHOD_CREATEREMOTETHREAD:
 	{
 		if ( !CreateRemoteThreadMethod( pid, dll_path.c_str( ) ) )
-		{
 			return false;
-		}
-		std::cout << "Injection successful (probably)." << std::endl;
+
+		std::cout << "Injection successful." << std::endl;
 	}
 	break;
 	default:
 		std::cout << "Invalid injection method." << std::endl;
 		std::cout << "Available injection methods:" << std::endl << "1 - CreateRemoteThread" << std::endl;
-		break;
+	break;
 	}
 
 	return true;
