@@ -27,7 +27,7 @@ SOFTWARE. */
 
 Process* process;
 
-void Initialize( std::string dll_path, std::string process_name, int injection_method );
+void Initialize( std::string base_directory, std::string dll_path, std::string process_name, int injection_method );
 bool StartInjectionMethod( int pid, std::string dll_path, int injection_method );
 
 int main( int argc, char* argv[ ] )
@@ -42,7 +42,7 @@ int main( int argc, char* argv[ ] )
 
 	try
 	{
-		Initialize( argv[ 1 ], argv[ 2 ], atoi( argv[ 3 ] ) );
+		Initialize( argv[ 0 ], argv[ 1 ], argv[ 2 ], atoi( argv[ 3 ] ) );
 	}
 	catch ( ... )
 	{
@@ -55,7 +55,7 @@ int main( int argc, char* argv[ ] )
 	return 0;
 }
 
-void Initialize( std::string dll_path, std::string process_name, int injection_method )
+void Initialize( std::string base_directory, std::string dll_path, std::string process_name, int injection_method )
 {
 	unsigned int pid = Utilities::GrabProcessByName( process_name );
 	if ( !pid )
@@ -81,6 +81,20 @@ void Initialize( std::string dll_path, std::string process_name, int injection_m
 	// Try to inject
 	if ( !StartInjectionMethod( pid, dll_path, injection_method ) )
 		Utilities::RaiseError( );
+
+	if ( !std::experimental::filesystem::exists( "zInjector.bat" ) )
+	{
+		std::cout << "Create a batch file to easily run this program with the given arguments? [Y/N]" << std::endl;
+
+		char input;
+		std::cin >> input;
+
+		if ( input == 'y' || input == 'Y' )
+		{
+			std::ofstream of_stream( "zInjector.bat", std::ofstream::out );
+			of_stream << base_directory << " " << dll_path << " " << process_name << " " << injection_method;
+		}
+	}
 
 	delete process;
 }

@@ -13,11 +13,14 @@
 #include <psapi.h>
 #include <tlhelp32.h>
 #include <iostream>
+#include <fstream> 
 #include <shlwapi.h>
 #include <string>
 #include <vector>
 #include <map>
 #include <stdio.h>
+
+#include <experimental/filesystem> 
 
 #include "utilities.h"
 #include "process.h"
