@@ -25,10 +25,8 @@ SOFTWARE. */
 #include "utilities.h"
 #include "createremotethread.h"
 
-Process* process;
-
 void Initialize( std::string base_directory, std::string dll_path, std::string process_name, int injection_method );
-bool StartInjectionMethod( int pid, std::string dll_path, int injection_method );
+bool DoInjectionMethod( Process process, std::string dll_path, int injection_method );
 
 int main( int argc, char* argv[ ] )
 {
@@ -57,32 +55,39 @@ int main( int argc, char* argv[ ] )
 
 void Initialize( std::string base_directory, std::string dll_path, std::string process_name, int injection_method )
 {
-	unsigned int pid = Utilities::GrabProcessByName( process_name );
-	if ( !pid )
-	{
-		std::cout << "Target process '" << process_name << "' is not running." << std::endl;
-		return;
-	}
-
-	// With all possible rights, grab the handle to the target process
-	process = new Process( pid );
-	if ( !process->Open( PROCESS_ALL_ACCESS, FALSE ) )
+	auto local_process = Process( GetCurrentProcessId( ), PROCESS_ALL_ACCESS );
+	if ( !local_process.SetPrivilege( SE_DEBUG_NAME, TRUE ) )
 	{
 		Utilities::RaiseError( );
 		return;
 	}
 
-	if ( !Utilities::VerifyLibrary( dll_path ) )
+	auto process = Process( process_name, PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ );
+	if ( !process.IsValid( ) )
+	{
+		std::cout << "Target process '" << process_name << "' is not running." << std::endl;
+		return;
+	}
+
+	if ( !process.Open( FALSE ) )
+	{
+		Utilities::RaiseError( );
+		return;
+	}
+
+	if ( !Utilities::IsValidLibrary( process, dll_path ) )
 	{
 		Utilities::RaiseError( );
 		return;
 	}
 
 	// Try to inject
-	if ( !StartInjectionMethod( pid, dll_path, injection_method ) )
+	if ( !DoInjectionMethod( process, dll_path, injection_method ) ) {
 		Utilities::RaiseError( );
+	}
 
-	if ( !std::experimental::filesystem::exists( "zInjector.bat" ) )
+	std::string filename = dll_path + ".bat";
+	if ( !std::experimental::filesystem::exists( filename ) )
 	{
 		std::cout << "Create a batch file to easily run this program with the given arguments? [Y/N]" << std::endl;
 
@@ -91,23 +96,22 @@ void Initialize( std::string base_directory, std::string dll_path, std::string p
 
 		if ( input == 'y' || input == 'Y' )
 		{
-			std::ofstream of_stream( "zInjector.bat", std::ofstream::out );
+			std::ofstream of_stream( filename, std::ofstream::out );
 			of_stream << base_directory << " " << dll_path << " " << process_name << " " << injection_method;
 		}
 	}
-
-	delete process;
 }
 
-bool StartInjectionMethod( int pid, std::string dll_path, int injection_method )
+bool DoInjectionMethod( Process process, std::string dll_path, int injection_method )
 {
 	switch ( injection_method )
 	{
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms682437(v=vs.85).aspx
 	case METHOD_CREATEREMOTETHREAD:
 	{
-		if ( !CreateRemoteThreadMethod( pid, dll_path.c_str( ) ) )
+		if ( !CreateRemoteThreadMethod( process, dll_path.c_str( ) ) ) {
 			return false;
+		}
 
 		std::cout << "Injection successful." << std::endl;
 	}
