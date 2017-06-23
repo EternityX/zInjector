@@ -13,7 +13,7 @@ void Utilities::RaiseError( )
 	DWORD size = FormatMessageA( format_flags, nullptr, last_error, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), reinterpret_cast<LPSTR>( &format_buffer ), 0, nullptr );
 
 	std::string text{ format_buffer, size };
-	std::cout << "ERROR: " << text << std::endl;
+	std::cout << text << std::endl;
 	std::cout << "Press ENTER to continue . . .";
 	std::cin.get( );
 }
@@ -74,7 +74,7 @@ PIMAGE_NT_HEADERS Utilities::RetrieveImageHeader( std::string dll_path )
 /// </summary>
 /// <param name="dll_path">Absolute path to the DLL</param>
 /// <returns>True on success</returns>
-bool Utilities::IsValidLibrary( Process process, std::string dll_path )
+bool Utilities::IsValidLibrary( PortableExecutable pe, std::string dll_path )
 {
 	auto library_header = RetrieveImageHeader( dll_path.c_str( ) );
 	if ( !library_header ) {
@@ -86,7 +86,7 @@ bool Utilities::IsValidLibrary( Process process, std::string dll_path )
 		std::cout << "The selected payload is not a valid DLL." << std::endl;
 		return false;
 	}
-	if ( !library_header->FileHeader.Machine == process.FetchImageHeader( )->FileHeader.Machine )
+	if ( !library_header->FileHeader.Machine == pe.FetchImageHeader( )->FileHeader.Machine )
 	{
 		std::cout << "The selected payload's architecture must match the target's" << std::endl;
 		return false;
@@ -98,4 +98,3 @@ bool Utilities::IsValidLibrary( Process process, std::string dll_path )
 
 	return true;
 }
-

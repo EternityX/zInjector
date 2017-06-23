@@ -22,8 +22,11 @@
 
 #include <experimental/filesystem> 
 
-#include "utilities.h"
 #include "process.h"
+#include "portable_executable.h"
+using namespace wpm;
+
+#include "utilities.h"
 
 #pragma comment (lib, "Shlwapi.lib")
 #pragma comment(lib,"psapi")

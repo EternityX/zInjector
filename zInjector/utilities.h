@@ -6,5 +6,5 @@ namespace Utilities
 {
 	void RaiseError( );
 	PIMAGE_NT_HEADERS RetrieveImageHeader( std::string dll_path );
-	bool IsValidLibrary( Process process, std::string dll_path );
+	bool IsValidLibrary( PortableExecutable pe, std::string dll_path );
 }

@@ -23,7 +23,8 @@ SOFTWARE. */
 
 #include "main.h"
 #include "utilities.h"
-#include "createremotethread.h"
+
+#include "nt_create_thread.h"
 
 void Initialize( std::string base_directory, std::string dll_path, std::string process_name, int injection_method );
 bool DoInjectionMethod( Process process, std::string dll_path, int injection_method );
@@ -56,27 +57,33 @@ int main( int argc, char* argv[ ] )
 void Initialize( std::string base_directory, std::string dll_path, std::string process_name, int injection_method )
 {
 	auto local_process = Process( GetCurrentProcessId( ), PROCESS_ALL_ACCESS );
-	if ( !local_process.SetPrivilege( SE_DEBUG_NAME, TRUE ) )
-	{
-		Utilities::RaiseError( );
-		return;
-	}
-
+	
 	auto process = Process( process_name, PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ );
 	if ( !process.IsValid( ) )
 	{
 		std::cout << "Target process '" << process_name << "' is not running." << std::endl;
-		return;
-	}
-
-	if ( !process.Open( FALSE ) )
-	{
 		Utilities::RaiseError( );
 		return;
 	}
 
-	if ( !Utilities::IsValidLibrary( process, dll_path ) )
+	if ( !process.Open( FALSE ) || !local_process.Open( FALSE ) )
 	{
+		std::cout << "Failed to open process with error code: ";
+		Utilities::RaiseError( );
+		return;
+	}
+
+	if ( !local_process.SetPrivilege( SE_DEBUG_NAME, TRUE ) )
+	{
+		std::cout << "Unable to set privilege with error code: ";
+		Utilities::RaiseError( );
+		return;
+	}
+
+	auto pe = PortableExecutable( &process );
+	if ( !Utilities::IsValidLibrary( pe, dll_path ) )
+	{
+		std::cout << "Unable to retrieve image header with error code: ";
 		Utilities::RaiseError( );
 		return;
 	}
@@ -109,18 +116,26 @@ bool DoInjectionMethod( Process process, std::string dll_path, int injection_met
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms682437(v=vs.85).aspx
 	case METHOD_CREATEREMOTETHREAD:
 	{
-		if ( !CreateRemoteThreadMethod( process, dll_path.c_str( ) ) ) {
+		if ( !process.LoadLibraryExternal( dll_path ) ) {
 			return false;
 		}
-
-		std::cout << "Injection successful." << std::endl;
+	}
+	break;
+	// Undocumented function
+	case METHOD_NTCREATETHREAD:
+	{
+		if ( !injection_methods::NtCreateThread( process, dll_path ) ) {
+			return false;
+		}
 	}
 	break;
 	default:
 		std::cout << "Invalid injection method." << std::endl;
-		std::cout << "Available injection methods:" << std::endl << "1 - CreateRemoteThread" << std::endl;
+		std::cout << "Available injection methods:" << std::endl << "1 - CreateRemoteThread" << std::endl << "2 - NtCreateThreadEx" << std::endl;
 	break;
 	}
+
+	std::cout << "Injection successful." << std::endl;
 
 	return true;
 }

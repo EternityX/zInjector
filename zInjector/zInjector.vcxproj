@@ -95,6 +95,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -127,6 +128,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -147,17 +149,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="createremotethread.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="manualmap.cpp" />
+    <ClCompile Include="manual_map.cpp" />
+    <ClCompile Include="nt_create_thread.cpp" />
+    <ClCompile Include="portable_executable.cpp" />
     <ClCompile Include="process.cpp" />
     <ClCompile Include="utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="createremotethread.h" />
     <ClInclude Include="includes.h" />
     <ClInclude Include="main.h" />
-    <ClInclude Include="manualmap.h" />
+    <ClInclude Include="manual_map.h" />
+    <ClInclude Include="nt_create_thread.h" />
+    <ClInclude Include="portable_executable.h" />
     <ClInclude Include="process.h" />
     <ClInclude Include="utilities.h" />
   </ItemGroup>
