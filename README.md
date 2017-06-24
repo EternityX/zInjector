@@ -25,5 +25,11 @@ C:\zInjector.exe C:\Library.dll notepad.exe 1
 - SetWindowsHookEx Injection
 - QueueUserAPC Injection
 
+# Credits
+- https://github.com/DarthTon/Blackbone/
+- https://github.com/stephenfewer/ReflectiveDLLInjection/
+- http://securityxploded.com/ntcreatethreadex.php/
+- https://bitbucket.org/evolution536/crysearch-memory-scanner/
+
 # License
 zInjector is licensed under the MIT License, see the LICENSE file for more information.
