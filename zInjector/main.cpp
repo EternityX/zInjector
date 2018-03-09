@@ -1,6 +1,6 @@
 /* MIT License
 
-Copyright(c) 2017 (https://github.com/EternityX/zInjector)
+Copyright(c) 2017 (https://github.com/EternityX/)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files( the "Software" ), to deal
@@ -26,113 +26,96 @@ SOFTWARE. */
 
 #include "nt_create_thread.h"
 
-void Initialize( std::string base_directory, std::string dll_path, std::string process_name, int injection_method );
-bool DoInjectionMethod( Process process, std::string dll_path, int injection_method );
+bool initialize( const std::string &base_directory, const std::string &dll_path, const std::string &process_name, int injection_method );
+bool do_injection_method( const wpm::Process &process, const std::string &dll_path, int injection_method );
 
-int main( int argc, char* argv[ ] )
-{
-	if ( argc != 4 )
-	{
-		std::cout << "Usage: " << argv[ 0 ] << " [DLL] [Process Name] [Injection Method]" << std::endl;
-		std::cin.get( );
-
+int main( int argc, char *argv[] ) {
+	if( argc != 4 ) {
+		std::cout << "Usage: " << argv[ 0 ] << " [DLL] [Process Name] [Injection Method]\n";
+		std::cin.get();
 		return 1;
 	}
 
-	try
-	{
-		Initialize( argv[ 0 ], argv[ 1 ], argv[ 2 ], atoi( argv[ 3 ] ) );
+	try {
+		if( !initialize( argv[ 0 ], argv[ 1 ], argv[ 2 ], atoi( argv[ 3 ] ) ) ) {
+			utilities::raise_error();
+			return 1;
+		}
 	}
-	catch ( ... )
-	{
-		std::cout << "Unknown injection error. Are you using the correct arguments?" << std::endl;
-		std::cin.get( );
-
+	catch( ... ) {
+		std::cout << "Unknown injection error. Are you using the correct arguments?\n";
+		std::cin.get();
 		return 1;
 	}
 
 	return 0;
 }
 
-void Initialize( std::string base_directory, std::string dll_path, std::string process_name, int injection_method )
-{
-	auto local_process = Process( GetCurrentProcessId( ), PROCESS_ALL_ACCESS );
+bool initialize( const std::string &base_directory, const std::string &dll_path, const std::string &process_name, int injection_method ) {
+	auto local_process = wpm::Process( GetCurrentProcessId( ), PROCESS_ALL_ACCESS );
 	
-	auto process = Process( process_name, PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ );
-	if ( !process.IsValid( ) )
-	{
-		std::cout << "Target process '" << process_name << "' is not running." << std::endl;
-		Utilities::RaiseError( );
-		return;
+	auto process = wpm::Process( process_name, PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ );
+	if( !process.is_valid() ) {
+		std::cout << "Target process '" << process_name << "' is not running.\n";
+		return false;
 	}
 
-	if ( !process.Open( FALSE ) || !local_process.Open( FALSE ) )
-	{
+	if( !process.open( FALSE ) || !local_process.open( FALSE ) ) {
 		std::cout << "Failed to open process with error code: ";
-		Utilities::RaiseError( );
-		return;
+		return false;
 	}
 
-	if ( !local_process.SetPrivilege( SE_DEBUG_NAME, TRUE ) )
-	{
+	// make sure our process has the correct privileges
+	if( !local_process.set_privilege( SE_DEBUG_NAME, TRUE ) ) {
 		std::cout << "Unable to set privilege with error code: ";
-		Utilities::RaiseError( );
-		return;
+		return false;
 	}
 
-	auto pe = PortableExecutable( &process );
-	if ( !Utilities::IsValidLibrary( pe, dll_path ) )
-	{
+	auto pe = wpm::PortableExecutable( &process );
+	if( !utilities::is_valid_library( pe, dll_path ) ) {
 		std::cout << "Unable to retrieve image header with error code: ";
-		Utilities::RaiseError( );
-		return;
+		return false;
 	}
 
-	// Try to inject
-	if ( !DoInjectionMethod( process, dll_path, injection_method ) ) {
-		Utilities::RaiseError( );
-	}
+	// attempt to inject
+	if( !do_injection_method( process, dll_path, injection_method ) )
+		return false;
 
 	std::string filename = dll_path + ".bat";
-	if ( !std::experimental::filesystem::exists( filename ) )
-	{
+	if( !std::experimental::filesystem::exists( filename ) ) {
 		std::cout << "Create a batch file to easily run this program with the given arguments? [Y/N]" << std::endl;
 
 		char input;
 		std::cin >> input;
 
-		if ( input == 'y' || input == 'Y' )
-		{
+		if( input == 'y' || input == 'Y' ) {
 			std::ofstream of_stream( filename, std::ofstream::out );
 			of_stream << base_directory << " " << dll_path << " " << process_name << " " << injection_method;
 		}
 	}
+
+	return true;
 }
 
-bool DoInjectionMethod( Process process, std::string dll_path, int injection_method )
+bool do_injection_method( const wpm::Process &process, const std::string &dll_path, int injection_method )
 {
-	switch ( injection_method )
-	{
-	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms682437(v=vs.85).aspx
-	case METHOD_CREATEREMOTETHREAD:
-	{
-		if ( !process.LoadLibraryExternal( dll_path ) ) {
-			return false;
+	switch( injection_method ) {
+		// https://msdn.microsoft.com/en-us/library/windows/desktop/ms682437(v=vs.85).aspx
+		case METHOD_CREATEREMOTETHREAD: {
+			if( !process.load_library_external( dll_path ) )
+				return false;
 		}
-	}
-	break;
-	// Undocumented function
-	case METHOD_NTCREATETHREAD:
-	{
-		if ( !injection_methods::NtCreateThread( process, dll_path ) ) {
-			return false;
+		break;
+		// undocumented function
+		case METHOD_NTCREATETHREAD: {
+			if( !injection_methods::nt_create_thread( process, dll_path ) )
+				return false;
 		}
-	}
-	break;
-	default:
-		std::cout << "Invalid injection method." << std::endl;
-		std::cout << "Available injection methods:" << std::endl << "1 - CreateRemoteThread" << std::endl << "2 - NtCreateThreadEx" << std::endl;
-	break;
+		break;
+		default:
+			std::cout << "Invalid injection method." << std::endl;
+			std::cout << "Available injection methods:" << std::endl << "1 - CreateRemoteThread" << std::endl << "2 - NtCreateThreadEx" << std::endl;
+		break;
 	}
 
 	std::cout << "Injection successful." << std::endl;

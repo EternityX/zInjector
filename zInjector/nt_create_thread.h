@@ -2,23 +2,22 @@
 
 #include "includes.h"
 
-struct NTCREATETHREAD_BUFFER 
-{
-	ULONG size;
-	ULONG unknown1;
-	ULONG unknown2;
-	PULONG unknown3;
-	ULONG unknown4;
-	ULONG unknown5;
-	ULONG unknown6;
-	PULONG unknown7;
-	ULONG unknown8;
+struct NTCREATETHREAD_BUFFER  {
+	ULONG     m_size;
+	ULONG     m_unknown1;
+	ULONG     m_unknown2;
+	PULONG    m_unknown3;
+	ULONG     m_unknown4;
+	ULONG     m_unknown5;
+	ULONG     m_unknown6;
+	PULONG    m_unknown7;
+	ULONG     m_unknown8;
 }; 
 
-using NTCREATETHREADEX = NTSTATUS( NTAPI* ) (
+typedef NTSTATUS ( __stdcall *NTCREATETHREADEX) (
 	PHANDLE thread,
 	ACCESS_MASK desired_access,
-	LPVOID object_Attributes,
+	LPVOID object_attributes,
 	HANDLE process_handle,
 	LPTHREAD_START_ROUTINE start_address,
 	LPVOID lp,
@@ -28,7 +27,6 @@ using NTCREATETHREADEX = NTSTATUS( NTAPI* ) (
 	ULONG size_of_stack_reserve,
 	LPVOID bytes_buffer );
 
-namespace injection_methods
-{
-	bool NtCreateThread( Process process, std::string library_path );
+namespace injection_methods {
+	bool nt_create_thread( wpm::Process process, const std::string &library_path );
 }

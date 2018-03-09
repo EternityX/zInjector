@@ -10,21 +10,20 @@
 #include <ntstatus.h>
 
 #include <cstdlib>
-#include <psapi.h>
-#include <tlhelp32.h>
+#include <cstdio>
+#include <Psapi.h>
+#include <TlHelp32.h>
 #include <iostream>
 #include <fstream> 
-#include <shlwapi.h>
+#include <Shlwapi.h>
 #include <string>
 #include <vector>
 #include <map>
-#include <stdio.h>
 
 #include <experimental/filesystem> 
 
 #include "process.h"
 #include "portable_executable.h"
-using namespace wpm;
 
 #include "utilities.h"
 
