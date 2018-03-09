@@ -97,8 +97,7 @@ bool initialize( const std::string &base_directory, const std::string &dll_path,
 	return true;
 }
 
-bool do_injection_method( const wpm::Process &process, const std::string &dll_path, int injection_method )
-{
+bool do_injection_method( const wpm::Process &process, const std::string &dll_path, int injection_method ) {
 	switch( injection_method ) {
 		// https://msdn.microsoft.com/en-us/library/windows/desktop/ms682437(v=vs.85).aspx
 		case METHOD_CREATEREMOTETHREAD: {
