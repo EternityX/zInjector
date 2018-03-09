@@ -18,13 +18,6 @@ zInjector [dll path] [process name] [method number]
 C:\zInjector.exe C:\Library.dll notepad.exe 1
 ```
 
-# Todo
-- Manual Mapping
-- RtlCreateUserThread Injection
-- Reflective Injection
-- SetWindowsHookEx Injection
-- QueueUserAPC Injection
-
 # Credits
 - https://github.com/DarthTon/Blackbone/
 - https://github.com/stephenfewer/ReflectiveDLLInjection/
