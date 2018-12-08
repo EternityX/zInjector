@@ -2,8 +2,7 @@
 
 #include "process.h"
 
-enum InjectionMethods
-{
+enum InjectionMethods {
 	METHOD_CREATEREMOTETHREAD = 1,
 	METHOD_NTCREATETHREAD = 2
 };

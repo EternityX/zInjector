@@ -1,6 +1,6 @@
 /* MIT License
 
-Copyright(c) 2017 (https://github.com/EternityX/)
+Copyright(c) 2018 (https://github.com/EternityX/)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files( the "Software" ), to deal
@@ -81,7 +81,7 @@ bool initialize( const std::string &base_directory, const std::string &dll_path,
 	if( !do_injection_method( process, dll_path, injection_method ) )
 		return false;
 
-	std::string filename = dll_path + ".bat";
+	auto filename = dll_path + ".bat";
 	if( !std::experimental::filesystem::exists( filename ) ) {
 		std::cout << "Create a batch file to easily run this program with the given arguments? [Y/N]" << std::endl;
 

@@ -2,6 +2,8 @@
 
 bool injection_methods::nt_create_thread( wpm::Process process, const std::string &library_path ) {
 	auto process_handle = process.get_handle();
+	if( !process_handle )
+		return false;
 
 	LPVOID base_address = VirtualAllocEx( process_handle, nullptr, library_path.length() + 1, MEM_COMMIT, PAGE_READWRITE );
 	if( !WriteProcessMemory( process_handle, base_address, library_path.c_str(), library_path.size() + 1, nullptr ) ) {
@@ -9,9 +11,12 @@ bool injection_methods::nt_create_thread( wpm::Process process, const std::strin
 		return false;
 	}
 
-	auto nt_create_thread_address = reinterpret_cast<NTCREATETHREADEX>( GetProcAddress( GetModuleHandleA( "ntdll" ), "NtCreateThreadEx" ) );
-	auto load_library_address = reinterpret_cast<LPTHREAD_START_ROUTINE>( GetProcAddress( GetModuleHandleA( "kernel32" ), "LoadLibraryA" ) );
-	
+	auto nt_create_thread_address = reinterpret_cast<NTCREATETHREADEX>( GetProcAddress( GetModuleHandleA( "ntdll.dll" ), "NtCreateThreadEx" ) );
+	auto load_library_address = reinterpret_cast<LPTHREAD_START_ROUTINE>( GetProcAddress( GetModuleHandleA( "kernel32.dll" ), "LoadLibraryA" ) );
+	if( !nt_create_thread_address || load_library_address )
+		return false;
+
+
 	DWORD temp1 = 0;
 
 	NTCREATETHREAD_BUFFER buffer{};

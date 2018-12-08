@@ -44,3 +44,5 @@ Release/zInjector\.iobj
 Release/zInjector\.ipdb
 
 Release/zInjector\.pdb
+
+*.opendb

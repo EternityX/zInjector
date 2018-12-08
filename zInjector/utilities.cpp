@@ -16,11 +16,6 @@ void utilities::raise_error() {
 	std::cin.get();
 }
 
-/// <summary>
-/// Retrieves the portable executable(PE) header of the passed DLL
-/// </summary>
-/// <param name="dll_path">Absolute path to the DLL</param>
-/// <returns>Pointer to PIMAGE_NT_HEADERS</returns>
 PIMAGE_NT_HEADERS utilities::retrieve_image_header( const std::string &dll_path ) {
 	// note: https://en.wikibooks.org/wiki/X86_Disassembly/Windows_Executable_Files
 
@@ -60,11 +55,6 @@ PIMAGE_NT_HEADERS utilities::retrieve_image_header( const std::string &dll_path 
 	return image_nt_headers;
 }
 
-/// <summary>
-/// Verifies the file exists and is a valid DLL
-/// </summary>
-/// <param name="dll_path">Absolute path to the DLL</param>
-/// <returns>True on success</returns>
 bool utilities::is_valid_library( wpm::PortableExecutable pe, const std::string &dll_path ) {
 	auto image_nt_headers = retrieve_image_header( dll_path );
 	if( !image_nt_headers )
