@@ -1,5 +1,5 @@
 # zInjector
-A command-line utility for injecting dynamic link libraries into external processes.
+A command-line utility for injecting x86 dynamic link libraries (DLL) into external processes.
 
 # Building
 Open 'zInjector.sln' in Visual Studio and build the solution in Release mode to create zInjector.exe.
